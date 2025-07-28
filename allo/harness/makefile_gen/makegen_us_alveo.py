@@ -69,7 +69,9 @@ def create_params(target, data):
         target.write(data["config_make"])
         target.write("\n\n")
     target.write(
-        "CXXFLAGS += -I$(XILINX_XRT)/include -I$(XILINX_VIVADO)/include -Wall -O0 -g -std=c++1y\n"
+        # "CXXFLAGS += -I$(XILINX_XRT)/include -I$(XILINX_VIVADO)/include -Wall -O0 -g -std=c++1y\n"
+        # add file path to include/CL/cl2.hpp and opencl.hpp
+        "CXXFLAGS += -I/mnt/ccnas2/bdp/rz1224/allo_t4p/examples/torch/include -I$(XILINX_XRT)/include -I$(XILINX_VIVADO)/include -Wall -O0 -g -std=c++1y\n"
     )
     target.write("LDFLAGS += -L$(XILINX_XRT)/lib -pthread -lOpenCL\n")
 
