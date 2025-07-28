@@ -13,6 +13,7 @@ os.environ["LLVM_BUILD_DIR"] = llvm_build_dir
 # source ~/xilinx_vitis.sh
 # source /opt/xilinx/xrt/setup.sh
 
+
 class Particle_MLP(nn.Module):
     def __init__(self):
         super(Particle_MLP, self).__init__()
@@ -33,6 +34,9 @@ batch_size = 32
 # num_particles = 8
 num_feats = 16
 
+# Model weights will be initialized randomly each time
+# So rebuild the hls project each time to compare the results with the golden output
+# Or load the same model weights to compare the results
 model = Particle_MLP().eval()
 example_inputs = [torch.rand(batch_size, num_feats)]
 
@@ -50,8 +54,8 @@ example_inputs = [torch.rand(batch_size, num_feats)]
 
 # VITIS HLS
 mode = "sw_emu"
-platform = "xilinx_u250_gen3x16_xdma_4_1_202210_1"
-os.environ["XDEVICE"] = platform
+os.environ["XDEVICE"] = "xilinx_u250_gen3x16_xdma_4_1_202210_1"
+os.environ["XCL_EMULATION_MODE"] = mode
 
 vitis_mod = allo.frontend.from_pytorch(
     model,
@@ -63,9 +67,9 @@ vitis_mod = allo.frontend.from_pytorch(
 # print(vitis_mod.hls_code)
 
 golden = model(*example_inputs)
-x_np = np.random.random((batch_size, num_feats)).astype(np.float32)
+x_np = x_np = example_inputs[0].detach().numpy().astype(np.float32)
 allo_out = np.zeros((batch_size, 5), dtype=np.float32)
 
 vitis_mod(x_np, allo_out)
-np.testing.assert_allclose(allo_out, golden.detach().numpy(), rtol=1e-3, atol=1e-3)
+np.testing.assert_allclose(allo_out, golden.detach().numpy(), rtol=1e-5, atol=1e-5)
 print("Passed!")
