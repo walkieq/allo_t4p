@@ -24,7 +24,7 @@ class ConstituentNet(nn.Module):
         num_particles: int = 30,
         activation: str = "ReLU",
         normalization: str = "Batch",
-        **kwargs
+        **kwargs,
     ) -> None:
         super(ConstituentNet, self).__init__()
         self.is_debug = is_debug
@@ -64,6 +64,9 @@ class ConstituentNet(nn.Module):
             ]
         )
 
+        # Add slicer to fix Allo slice issue
+        self.slicer = SliceFirstDim()
+
         torch.set_printoptions(
             precision=5, threshold=2097152, linewidth=1000, sci_mode=False
         )
@@ -96,8 +99,10 @@ class ConstituentNet(nn.Module):
             out = transformer(out)  # (batch_size, num_particles+1, embbed_dim)
             self.debug_print("out (after transformer layer)", out)
 
-        out = out[:, 0]  # (batch_size, embbed_dim)
-        self.debug_print("out (after out[:, 0])", out)
+        # out = out[:, 0]  # (batch_size, embbed_dim)
+        # self.debug_print("out (after out[:, 0])", out)
+
+        out = self.slicer(out)
 
         if self.normalization == "Batch" or self.normalization == "Layer":
             out = self.norm(out)
@@ -107,7 +112,7 @@ class ConstituentNet(nn.Module):
         self.debug_print("out (after linear)", out)
 
         # out = out.squeeze(1)
-        self.debug_print("out (after squeeze())", out)
+        # self.debug_print("out (after squeeze())", out)
 
         final_result = F.log_softmax(out, dim=-1)
         self.debug_print("final_result (softmax)", final_result)
@@ -348,14 +353,21 @@ class SelfAttention(nn.Module):
         self.debug_print("values", values)
 
         # Attention softmax(Q^T*K)
-        energy = torch.einsum("nqhc,nkhc->nhqk", [queries, keys])
+        # energy = torch.einsum("nqhc,nkhc->nhqk", [queries, keys])  # q: query len, k: key len
+        Q_ = queries.permute(0, 2, 1, 3)  # nqhc -> nhqc
+        K_ = keys.permute(0, 2, 3, 1)  # nkhc -> nhck
+        energy = torch.matmul(Q_, K_)  # nhqk
         self.debug_print("energy", energy)
 
         energy_post = energy
-        attention = torch.softmax(energy_post / (self.head_dim ** (1 / 2)), dim=-1)
+        attention = F.softmax(energy_post / (self.head_dim ** (1 / 2)), dim=-1)
 
         # Output
-        out = torch.einsum("nhql,nlhc->nqhc", [attention, values])
+        # out = torch.einsum("nhql,nlhc->nqhc", [attention, values])
+        # attention: nhql
+        V_ = values.permute(0, 2, 1, 3)  # nlhc -> nhlc
+        out = torch.matmul(attention, V_)  # nhqc
+        out = out.permute(0, 2, 1, 3)  # nhqc -> nqhc
         self.debug_print("out (after einsum)", out)
 
         out = out.reshape(m_batch, seq_len, -1)
@@ -368,3 +380,9 @@ class SelfAttention(nn.Module):
         self.debug_print("final_sum (before returning)", final_sum)
 
         return final_sum
+
+
+class SliceFirstDim(nn.Module):
+    def forward(self, inp):
+        # Only for out[:, 0, :]
+        return inp[:, 0, :]
