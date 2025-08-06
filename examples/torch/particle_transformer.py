@@ -9,10 +9,14 @@ allo_t4p_dir = os.path.dirname(os.path.dirname(cur_dir))
 llvm_build_dir = os.path.join(allo_t4p_dir, "externals/llvm-project/build")
 os.environ["LLVM_BUILD_DIR"] = llvm_build_dir
 
+# source ~/xilinx_vitis.sh
+# source /opt/xilinx/xrt/setup.sh
+
 num_particles = 8
 num_feats = 3
-num_transformers = 1
-embbed_dim = 64
+# Smallest model for transformer
+num_transformers = 4
+embbed_dim = 8
 num_heads = 2
 dropout = 0
 batch_size = 16
@@ -50,7 +54,7 @@ np_input = example_inputs[0].detach().numpy()
 # print(mod.hls_code)
 
 # VITIS HLS
-mode = "sw_emu"
+mode = "hw_emu"
 os.environ["XDEVICE"] = "xilinx_u250_gen3x16_xdma_4_1_202210_1"
 os.environ["XCL_EMULATION_MODE"] = mode
 
@@ -60,7 +64,7 @@ vitis_mod = allo.frontend.from_pytorch(
     leaf_modules=(SliceFirstDim,),
     target="vitis_hls",
     mode=mode,
-    project="transformer_sw.prj",
+    project="model0_hw.prj",
     verbose=False,
 )
 
