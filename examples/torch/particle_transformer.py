@@ -2,7 +2,7 @@ import allo
 import torch
 import numpy as np
 import os
-from model import ConstituentNet, SliceFirstDim
+from model import ConstituentNet, SliceClsToken
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 allo_t4p_dir = os.path.dirname(os.path.dirname(cur_dir))
@@ -39,36 +39,33 @@ golden = model(*example_inputs)
 np_input = example_inputs[0].detach().numpy()
 
 # LLVM
-# llvm_mod = allo.frontend.from_pytorch(
-#     model,
-#     example_inputs=example_inputs,
-#     leaf_modules=(SliceFirstDim,),
-#     verbose=False,
-# )
-# res = llvm_mod(np_input)
-# np.testing.assert_allclose(res, golden.detach().numpy(), atol=1e-5)
-# print("Test passed!")
-
-# generate HLS module
-# mod = allo.frontend.from_pytorch(module, example_inputs=example_inputs, target="vhls")
-# print(mod.hls_code)
-
-# VITIS HLS
-mode = "hw_emu"
-os.environ["XDEVICE"] = "xilinx_u250_gen3x16_xdma_4_1_202210_1"
-os.environ["XCL_EMULATION_MODE"] = mode
-
-vitis_mod = allo.frontend.from_pytorch(
+llvm_mod = allo.frontend.from_pytorch(
     model,
     example_inputs=example_inputs,
-    leaf_modules=(SliceFirstDim,),
-    target="vitis_hls",
-    mode=mode,
-    project="model0_hw.prj",
+    leaf_modules=(SliceClsToken,),
     verbose=False,
 )
+res = llvm_mod(np_input)
+np.testing.assert_allclose(res, golden.detach().numpy(), atol=1e-5)
+print("Test passed!")
 
-allo_out = np.zeros((batch_size, 5), dtype=np.float32)
-vitis_mod(np_input, allo_out)
-np.testing.assert_allclose(allo_out, golden.detach().numpy(), rtol=1e-5, atol=1e-5)
-print("Passed!")
+
+# VITIS HLS
+# mode = "hw_emu"
+# os.environ["XDEVICE"] = "xilinx_u250_gen3x16_xdma_4_1_202210_1"
+# os.environ["XCL_EMULATION_MODE"] = mode
+
+# vitis_mod = allo.frontend.from_pytorch(
+#     model,
+#     example_inputs=example_inputs,
+#     leaf_modules=(SliceClsToken,),
+#     target="vitis_hls",
+#     mode=mode,
+#     project="model0_hw.prj",
+#     verbose=False,
+# )
+
+# allo_out = np.zeros((batch_size, 5), dtype=np.float32)
+# vitis_mod(np_input, allo_out)
+# np.testing.assert_allclose(allo_out, golden.detach().numpy(), rtol=1e-5, atol=1e-5)
+# print("Passed!")

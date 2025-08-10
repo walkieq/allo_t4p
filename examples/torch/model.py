@@ -65,7 +65,7 @@ class ConstituentNet(nn.Module):
         )
 
         # Add slicer to fix Allo slice issue
-        self.slicer = SliceFirstDim()
+        self.slicer = SliceClsToken()
 
         torch.set_printoptions(
             precision=5, threshold=2097152, linewidth=1000, sci_mode=False
@@ -382,7 +382,6 @@ class SelfAttention(nn.Module):
         return final_sum
 
 
-class SliceFirstDim(nn.Module):
+class SliceClsToken(nn.Module):
     def forward(self, inp):
-        # Only for out[:, 0, :]
         return inp[:, 0, :]

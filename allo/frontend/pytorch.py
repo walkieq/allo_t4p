@@ -15,7 +15,7 @@ try:
     from .tracer import AlloTracer
 except ImportError:
     pass
-from .library import CoreAttention_lib, KVCache_lib, SliceFirstDim_lib
+from .library import CoreAttention_lib, KVCache_lib, SliceClsToken_lib
 from .. import dsl
 from ..library import nn
 from ..ir import types
@@ -179,16 +179,9 @@ class TorchBuilder:
     def build_getattr(self, node):
         pass
 
-    ############################# cls_token #############################
+    # For cls_token
     def build_get_attr(self, node):
         pass
-
-    ############################# repeat #############################
-    # def build_repeat(self, node):
-    #     # For batch size 1, no need to repeat
-    #     inp = get_var_name(node.args[0])
-    #     # identity
-    #     return f"{node.name} = {inp}"
 
     def build_repeat(self, node):
         inp = get_var_name(node.args[0])
@@ -528,9 +521,9 @@ class TorchBuilder:
             self.subfunctions.append(src)
         return f"{node.name} = KVCache({', '.join([get_var_name(arg) for arg in node.args])})"
 
-    def build_SliceFirstDim(self, node):
+    def build_SliceClsToken(self, node):
         shape = tuple(node.args[0].meta["tensor_meta"].shape)
-        src = inspect.getsource(SliceFirstDim_lib(*shape))
+        src = inspect.getsource(SliceClsToken_lib(*shape))
         src = (
             src.replace("s_0", str(shape[0]))
             .replace("s_1", str(shape[1]))
@@ -539,7 +532,7 @@ class TorchBuilder:
         if src not in self.subfunctions:
             self.subfunctions.append(src)
 
-        return f"{node.name} = SliceFirstDim({get_var_name(node.args[0])})"
+        return f"{node.name} = SliceClsToken({get_var_name(node.args[0])})"
 
     def build_conv2d(self, node):
         # The current implementation only supports conv2d with bias, dialation=1, shape = 4
