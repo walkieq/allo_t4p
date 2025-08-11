@@ -566,10 +566,8 @@ class TorchBuilder:
         dtype_obj = self._resolve_dtype_obj("relu")
         if len(shape) == 2:
             n, d = shape
-            self.composition.append(("relu2d", name_id, [dtype_obj, n, d]))
-            return (
-                f'{node.name} = nn.relu2d[{dtype_name}, {n}, {d}, "{name_id}"]({inp})'
-            )
+            self.composition.append(("relu2d", name_id, [float32, n, d]))
+            return f'{node.name} = nn.relu2d[float32, {n}, {d}, "{name_id}"]({inp})'
         if len(shape) == 3:
             n, l, c = shape
             name_id = self.get_unique_id("relu3d")
