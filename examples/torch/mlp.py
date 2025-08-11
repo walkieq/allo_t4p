@@ -7,6 +7,13 @@ import torch.nn as nn
 import allo
 from allo.ir.types import float32, Fixed
 
+import os
+
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+allo_t4p_dir = os.path.dirname(os.path.dirname(cur_dir))
+llvm_build_dir = os.path.join(allo_t4p_dir, "externals/llvm-project/build")
+os.environ["LLVM_BUILD_DIR"] = llvm_build_dir
+
 
 class MLP(nn.Module):
     def __init__(self):
@@ -31,8 +38,10 @@ llvm_mod = allo.frontend.from_pytorch(
     weights_as_args=True,
     op_dtypes={
         "inputs": float32,
-        "linear1": [float32, Fixed(64, 30), float32],  # X, W, O for first linear
-        "linear2": [float32, Fixed(64, 30), float32],  # X, W, O for second linear
+        # "linear1": [float32, Fixed(64, 30), float32],  # X, W, O for first linear
+        # "linear2": [float32, Fixed(64, 30), float32],  # X, W, O for second linear
+        "linear1": [float32, Fixed(16, 10), float32],  # X, W, O for first linear
+        "linear2": [float32, Fixed(16, 10), float32],  # X, W, O for second linear
         "relu": float32,
         "outputs": float32,  # optional outputs annotation
     },
@@ -40,5 +49,5 @@ llvm_mod = allo.frontend.from_pytorch(
 golden = model(*example_inputs)
 np_inputs = [x.detach().numpy() for x in example_inputs]
 res = llvm_mod(*np_inputs)
-torch.testing.assert_close(res, golden.detach().numpy())
+torch.testing.assert_close(res, golden.detach().numpy(), atol=1e-2, rtol=1e-2)
 print("Passed!")
