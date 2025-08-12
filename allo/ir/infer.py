@@ -10,6 +10,7 @@ import textwrap
 import warnings
 import sympy
 import numpy as np
+import re
 
 from .visitor import ASTVisitor
 from .symbol_resolver import ASTResolver
@@ -369,6 +370,10 @@ class TypeInferer(ASTVisitor):
             if np_values.dtype != target_np_type:
                 # avoid changing the address of the original array
                 np_values = np_values.astype(target_np_type)
+
+        elif re.match(r"^Fixed\(\d+\s*,\s*\d+\)$", dtype, re.IGNORECASE):
+            pass
+
         else:
             raise RuntimeError("Unsupported constant tensor element type")
         node.np_values = np_values
