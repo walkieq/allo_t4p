@@ -188,8 +188,17 @@ class SwitchNode:
         def __repr__(self):
             return self.__str__()
 
-    def __init__(self, name: str, send_port_num: int, recv_port_num: int):
+    def __init__(
+        self,
+        name: str,
+        send_port_num: int,
+        recv_port_num: int,
+        col_id: int,
+        row_id: int,
+    ):
         self.name = name
+        self.col_id = col_id
+        self.row_id = row_id
         self.max_send = send_port_num
         self.max_recv = recv_port_num
         self.send_ports: list[SwitchNode.Port] = []
@@ -204,7 +213,7 @@ class SwitchNode:
         return self.name == other.name
 
     def print(self):
-        print(f"\n<<<<< Switch {self.name} >>>>>")
+        print(f"\n<<<<< Switch {self.name} ({self.col_id}, {self.row_id}) >>>>>")
         print(f"send ports: {self.send_ports}")
         print(f"recv ports: {self.recv_ports}")
         print(f"intra connect: {self.intra_connect}")
@@ -331,8 +340,8 @@ class NodeMetaData:
         in2 = Counter((s.src, s.type_str) for s in other.input_streams)
         if in1 != in2:
             return False
-        out1 = Counter((s.src, s.type_str) for s in self.output_streams)
-        out2 = Counter((s.src, s.type_str) for s in other.output_streams)
+        out1 = Counter((s.dst, s.type_str) for s in self.output_streams)
+        out2 = Counter((s.dst, s.type_str) for s in other.output_streams)
         if out1 != out2:
             return False
         return True
@@ -507,7 +516,7 @@ class ComputationGraph:
         # update stream
         for name, stream in self.edges.items():
             if stream.src in node_name_list:
-                self.dependencies[stream.dst].pop(stream.src)
+                self.dependencies[stream.dst].remove(stream.src)
                 stream.src = bundled_node.meta_data.name
                 self.dependencies[stream.dst].add(bundled_node.meta_data.name)
             if stream.dst in node_name_list:
